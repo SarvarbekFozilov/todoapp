@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"strings"
 	models "todo/models"
 
 	"github.com/jmoiron/sqlx"
@@ -17,7 +18,12 @@ func NewAuthPostgress(db *sqlx.DB) *AuthPostgress {
 
 func (r *AuthPostgress) CreateUser(user *models.CreateUser) (int, error) {
 	var id int
-	query := fmt.Sprintf("INSERT INTO %s ( username, password_hash,photo,birth_location) values ($1, $2, $3,$4) RETURNING id", usersTable)
+	query := fmt.Sprintf(`INSERT INTO %s ( 
+		username, 
+		password_hash,
+		photo,
+		birth_location) 
+			values ($1, $2, $3, $4) RETURNING id`, usersTable)
 
 	row := r.db.QueryRow(query, user.Username, user.Password, user.Photo, user.Birthlocation)
 	if err := row.Scan(&id); err != nil {
@@ -90,34 +96,39 @@ func (r *AuthPostgress) DeleteUser(req *models.IdRequest) (string, error) {
 
 	return req.Id, nil
 }
-func (r *AuthPostgress) CreateUsers(users []models.CreateUser) ([]int, error) {
-	ids := make([]int, len(users))
 
-	stmt := fmt.Sprintf("INSERT INTO %s (username, password_hash, photo, birth_location) VALUES ", usersTable)
-
-	values := []interface{}{}
-	for i, user := range users {
-		stmt += fmt.Sprintf("($%d, $%d, $%d, $%d),", i*4+1, i*4+2, i*4+3, i*4+4)
-		values = append(values, user.Username, user.Password, user.Photo, user.Birthlocation)
+func GenerateInsertQuery(dataSlice []models.CreateUser, tableName string) string {
+	query := fmt.Sprintf("INSERT INTO %s (username, password_hash, photo, birth_location) VALUES", tableName)
+	valueStrings := []string{}
+	for _, data := range dataSlice {
+		username := data.Username
+		password := data.Password
+		photo := data.Photo
+		birthLocation := data.Birthlocation
+		values := fmt.Sprintf("('%s', '%s', '%s', '%s')", username, password, photo, birthLocation) //sql injection otkazvoradi $1 best practice
+		valueStrings = append(valueStrings, values)                                                 // funcksialarni  boshqarish uchun  contex ishlatladi
 	}
+	query += "\n" + strings.Join(valueStrings, ",\n") + ";"
+	return query
+}
+func (r *AuthPostgress) CreateUsers(users []models.CreateUser) ([]int, error) {
+	ids := make([]int, 0, len(users))
 
-	stmt = stmt[:len(stmt)-1]
+	query := GenerateInsertQuery(users, "users")
 
-	query := fmt.Sprintf("%s RETURNING id", stmt)
-
-	rows, err := r.db.Query(query, values...)
+	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	index := 0
 	for rows.Next() {
-		err := rows.Scan(&ids[index])
-		if err != nil {
-			return nil, err
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return ids, err
 		}
-		index++
+
+		ids = append(ids, id)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -126,25 +137,35 @@ func (r *AuthPostgress) CreateUsers(users []models.CreateUser) ([]int, error) {
 
 	return ids, nil
 }
-func (r *AuthPostgress) UpdateUsers(users []models.User) (string, error) {
-	stmt := fmt.Sprintf("UPDATE %s SET username = v.username, password_hash = v.password_hash, photo = v.photo, birth_location = v.birth_location FROM (VALUES ", usersTable)
 
-	values := []interface{}{}
-	for i, user := range users {
-		stmt += fmt.Sprintf("($%d, $%d, $%d, $%d),", i*4+1, i*4+2, i*4+3, i*4+4)
-		values = append(values, user.ID, user.Username, user.Password, user.Photo, user.BirthLocation)
+func GenerateUpdateQuery(users []models.User, tableName string) string {
+	query := fmt.Sprintf("UPDATE %s SET", tableName)
+	valueStrings := []string{}
+	for _, data := range users {
+		id := data.ID
+		username := data.Username
+		password := data.Password
+		photo := data.Photo
+		birthLocation := data.BirthLocation
+		values := fmt.Sprintf("(%s, '%s', '%s', '%s', '%s')", id, username, password, photo, birthLocation)
+		valueStrings = append(valueStrings, values)
 	}
+	query += " username = v.username, password_hash = v.password_hash, photo = v.photo, birth_location = v.birth_location FROM (VALUES\n" + strings.Join(valueStrings, ",\n") + ") AS v(id, username, password_hash, photo, birth_location) WHERE %s.id = v.id;"
+	return query
+}
+func (r *AuthPostgress) UpdateUsers(users []models.User) ([]string, error) {
+	ids := make([]string, 0, len(users))
 
-	stmt = stmt[:len(stmt)-1] // Remove the trailing comma
+	query := GenerateUpdateQuery(users, "users")
 
-	stmt += ") AS v(id, username, password_hash, photo, birth_location) WHERE %s.id = v.id"
-
-	query := fmt.Sprintf(stmt, usersTable)
-
-	_, err := r.db.Exec(query, values...)
+	_, err := r.db.Exec(query)
 	if err != nil {
-		return "Error Update Users", err
+		return nil, err
 	}
 
-	return "Users updated successfully", nil
+	for _, user := range users {
+		ids = append(ids, user.ID)
+	}
+
+	return ids, nil
 }

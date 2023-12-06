@@ -116,3 +116,19 @@ func (h *Handler) CreateUsers(c *gin.Context) {
 		"ids": ids,
 	})
 }
+func (h *Handler) UpdateUsers(c *gin.Context) {
+	var users []models.User
+
+	if err := c.BindJSON(&users); err != nil {
+		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ids, err := h.services.Authorization.UpdateUsers(users)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Users successfully updated", "ids": ids})
+}

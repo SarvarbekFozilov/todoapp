@@ -19,9 +19,11 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/", h.CreateUser)
+		auth.POST("/create/users", h.CreateUsers)
 		auth.GET("/:id", h.GetUserById)
 		auth.GET("/", h.GetAllUsers)
 		auth.PUT("/:id", h.UpdateUser)
+		auth.PUT("/users", h.UpdateUsers)
 		auth.DELETE("/:id", h.DeleteUser)
 	}
 

@@ -53,7 +53,18 @@ func (s *AuthService) CreateUsers(users []models.CreateUser) ([]int, error) {
 	return s.repo.CreateUsers(users)
 }
 
-func (s *AuthService) UpdateUsers(req []models.User) (string, error) {
+func (s *AuthService) UpdateUsers(users []models.User) ([]string, error) {
+	updateUsers := make([]models.User, len(users))
 
-	return s.repo.UpdateUsers(req)
+	for i, user := range users {
+		updateUsers[i] = models.User{
+			ID:            user.ID,
+			Username:      user.Username,
+			Password:      user.Password,
+			Photo:         user.Photo,
+			BirthLocation: user.BirthLocation,
+		}
+	}
+
+	return s.repo.UpdateUsers(updateUsers)
 }

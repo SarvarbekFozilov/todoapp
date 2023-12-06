@@ -13,7 +13,7 @@ type Authorization interface {
 	UpdateUser(req *models.User) (string, error)
 	DeleteUser(req *models.IdRequest) (string, error)
 	CreateUsers(user []models.CreateUser) ([]int, error)
-	UpdateUsers(req []models.User) (string, error)
+	UpdateUsers(req []models.User) ([]string, error)
 }
 type TodoList interface {
 }

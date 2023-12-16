@@ -62,40 +62,49 @@ func (r *UserPostgress) GetUserById(req *models.IdRequest) (*models.UserResponse
 	}
 	return &user, nil
 }
+
 func (r UserPostgress) GetAllUsers(req *models.GetAllUserReq) (rep models.GetAllUser, err error) {
 	params := make(map[string]interface{})
+
 	offset := (req.Page - 1) * req.Limit
 	params["limit"] = req.Limit
 	params["offset"] = offset
-
+	// scanArgs := make([]interface{}, 0)
+	selected := []string{"username", "fullname", "photo", "birthday", "location", "created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by"}
 	query := `
 	  SELECT 
 	         id,
-			 fullname,
-			 username,
-			 photo,
-			 birthday,
-			 location
-		FROM users WHERE deleted_at IS NULL`
+			 fullname`
 
+	for _, field := range req.Fields {
+		fmt.Println(field)
+		for _, s := range selected {
+			if field == s {
+				query += fmt.Sprintf(`, %s`, field)
+			}
+		}
+	}
+	query += ` FROM users WHERE deleted_at is NULL `
 	if req.Search != "" {
 		filter := "AND username ILIKE '%' || :filter || '%'"
 		params["filter"] = req.Search
 		query += filter
 	}
 
-	// Execute the SQL query
+	// // Execute the SQL query
 	rows, err := r.db.NamedQuery(query, params)
 	if err != nil {
+
 		return rep, err
 	}
 	defer rows.Close()
 
 	// Iterate over the result rows and populate the response
 	for rows.Next() {
-		var user models.CreateUserReq
+		var user models.User
 		err := rows.StructScan(&user)
 		if err != nil {
+			fmt.Println("mendan chiqti", err)
 			return rep, err
 		}
 		rep.Users = append(rep.Users, user)

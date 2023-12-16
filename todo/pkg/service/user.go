@@ -1,10 +1,9 @@
 package service
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
 	"strings"
+
 	models "todo/models"
 	"todo/pkg/repository"
 )
@@ -25,7 +24,11 @@ func (s *UserService) CreateUser(user *models.CreateUserReq) (int, error) {
 func (s *UserService) GetUserById(req *models.IdRequest) (rep *models.UserResponse, err error) {
 	return s.repo.GetUserById(req)
 }
-func (s *UserService) GetAllUsers(req *models.GetAllUserReq) (rep models.GetAllUser, err error) {
+func (s *UserService) GetAllUsers(fields string, req *models.GetAllUserReq) (rep models.GetAllUser, err error) {
+	fieldsArr := strings.Split(fields, ",")
+
+	req.Fields = fieldsArr
+
 	return s.repo.GetAllUsers(req)
 }
 
@@ -58,26 +61,26 @@ func (s *UserService) UpdateUsers(users []models.UpdateUser) (string, error) {
 	return res, nil
 }
 
-func convertStringIDsToInts(ids string) ([]int, error) {
-	idStrings := strings.Split(ids, ",")
-	var result []int
+// func convertStringIDsToInts(ids string) ([]int, error) {
+// 	idStrings := strings.Split(ids, ",")
+// 	var result []int
 
-	for _, idStr := range idStrings {
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			return nil, errors.New("invalid user ID")
-		}
-		result = append(result, id)
-	}
+// 	for _, idStr := range idStrings {
+// 		id, err := strconv.Atoi(idStr)
+// 		if err != nil {
+// 			return nil, errors.New("invalid user ID")
+// 		}
+// 		result = append(result, id)
+// 	}
 
-	return result, nil
-}
+// 	return result, nil
+// }
 
-func convertToStrings(fields string) ([]string, error) {
-	fieldStrings := strings.Split(fields, ",")
-	var result []string
+// func convertToStrings(fields string) ([]string, error) {
+// 	fieldStrings := strings.Split(fields, ",")
+// 	var result []string
 
-	result = append(result, fieldStrings...)
+// 	result = append(result, fieldStrings...)
 
-	return result, nil
-}
+// 	return result, nil
+// }

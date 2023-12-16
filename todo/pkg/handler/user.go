@@ -7,7 +7,6 @@ import (
 	models "todo/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 func (h *Handler) CreateUser(c *gin.Context) {
@@ -44,34 +43,37 @@ func (h *Handler) GetUserById(c *gin.Context) {
 
 	c.JSON(http.StatusOK, users)
 }
+
 func (h *Handler) GetAllUsers(c *gin.Context) {
+	fields := c.Query("fields")
 	pageStr := c.DefaultQuery("page", "1")
 	page, err := strconv.Atoi(pageStr)
 	if err != nil {
-		logrus.Fatalf("Error getting page: %s", err.Error())
-		c.JSON(http.StatusBadRequest, "invalid page param")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
 		return
 	}
 
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	if err != nil {
-		logrus.Fatalf("Error getting limit: %s", err.Error())
-		c.JSON(http.StatusBadRequest, "invalid limit param")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
 		return
 	}
 
-	resp, err := h.services.GetAllUsers(&models.GetAllUserReq{
+	req := &models.GetAllUserReq{
 		Page:   page,
 		Limit:  limit,
 		Search: c.Query("search"),
-	})
+	}
+
+	resp, err := h.services.GetAllUsers(fields, req)
 	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, resp)
 }
+
 func (h *Handler) UpdateUser(c *gin.Context) {
 	var user models.UpdateUser
 

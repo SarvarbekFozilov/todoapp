@@ -14,7 +14,7 @@ type Authorization interface {
 type User interface {
 	CreateUser(user *models.CreateUserReq) (int, error)
 	GetUserById(req *models.IdRequest) (rep *models.UserResponse, err error)
-	GetAllUsers(req *models.GetAllUserReq) (rep models.GetAllUser, err error)
+	GetAllUsers(fields string, req *models.GetAllUserReq) (rep models.GetAllUser, err error)
 	UpdateUser(req *models.UpdateUser) (int, error)
 	DeleteUser(req *models.IdRequest) (int, error)
 	CreateUsers(user []models.CreateUserReq) ([]int, error)
@@ -26,10 +26,9 @@ type Service struct {
 	User
 }
 
-
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization),
-		User:NewUserService(repos.User),
+		User:          NewUserService(repos.User),
 	}
 }

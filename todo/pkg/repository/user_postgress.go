@@ -63,19 +63,9 @@ func (r *UserPostgress) GetUserById(req *models.IdRequest) (*models.UserResponse
 	return &user, nil
 }
 
-func (r UserPostgress) GetAllUsers(req *models.GetAllUserReq) (rep models.GetAllUser, err error) {
-	params := make(map[string]interface{})
-
-	offset := (req.Page - 1) * req.Limit
-	params["limit"] = req.Limit
-	params["offset"] = offset
-	// scanArgs := make([]interface{}, 0)
+func GenerateFieldQuery(req *models.GetAllUserReq) string {
 	selected := []string{"username", "fullname", "photo", "birthday", "location", "created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by"}
-	query := `
-	  SELECT 
-	         id,
-			 fullname`
-
+	var query string
 	for _, field := range req.Fields {
 		fmt.Println(field)
 		for _, s := range selected {
@@ -84,6 +74,22 @@ func (r UserPostgress) GetAllUsers(req *models.GetAllUserReq) (rep models.GetAll
 			}
 		}
 	}
+	return query
+}
+
+func (r UserPostgress) GetAllUsers(req *models.GetAllUserReq) (rep models.GetAllUser, err error) {
+	params := make(map[string]interface{})
+
+	offset := (req.Page - 1) * req.Limit
+	params["limit"] = req.Limit
+	params["offset"] = offset
+
+	query := `
+	  SELECT 
+	         id,
+			 fullname`
+
+	query += GenerateFieldQuery(req)
 	query += ` FROM users WHERE deleted_at is NULL `
 	if req.Search != "" {
 		filter := "AND username ILIKE '%' || :filter || '%'"
@@ -104,7 +110,6 @@ func (r UserPostgress) GetAllUsers(req *models.GetAllUserReq) (rep models.GetAll
 		var user models.User
 		err := rows.StructScan(&user)
 		if err != nil {
-			fmt.Println("mendan chiqti", err)
 			return rep, err
 		}
 		rep.Users = append(rep.Users, user)
